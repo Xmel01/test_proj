@@ -1,0 +1,50 @@
+version: '3.1'
+
+services:
+
+  db:
+    image: postgres
+    container_name: alikson_postgres
+    restart: always
+    volumes:
+      - database:/var/lib/postgresql/data
+    environment:
+      POSTGRES_PASSWORD: test_pwd123
+      POSTGRES_USER: test_user
+      POSTGRES_DB: db01
+      PGDATA: /var/lib/postgresql/data
+      POSTGRES_INITDB_ARGS: "-A md5"
+    ports:
+      - "5432:5432"
+
+  backend:
+    build:
+      dockerfile: Dockerfile
+      context: /home/alikson/docker
+    image: django-alikson:latest
+    container_name: django-alikson
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    volumes:
+      - static_volume:/app/static
+    command: >
+      bash -c "python3 manage.py makemigrations && python3 manage.py migrate && gunicorn alikson.wsgi:application --bind 0.0.0.0:8000"
+      
+  nginx:
+    build:
+      dockerfile: Dockerfile
+      context: /home/alikson/docker/nginx
+    container_name: nginx-alikson
+    image: nginx-alikson
+    volumes:
+      - static_volume:/app/static
+    depends_on:
+      - backend
+    ports:
+      - "8000:8000"
+
+volumes:
+  static_volume:
+  database:
